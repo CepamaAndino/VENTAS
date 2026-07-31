@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fonda CEPAMA - Venta de Bebestibles</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Inter',system-ui,sans-serif; background:#F6F6F2; color:#1a1a1a; }
+  :root { --azul:#0039A6; --azul-dark:#00204F; --rojo:#D52B1E; }
+  .fv-header { background: linear-gradient(135deg, var(--azul) 0%, var(--azul) 60%, var(--rojo) 60%, var(--rojo) 100%); color:white; padding:22px 24px; display:flex; align-items:center; gap:14px; }
+  .fv-title { font-family:'Anton',sans-serif; font-size:28px; letter-spacing:0.5px; line-height:1; margin:0; }
+  .fv-sub { font-size:13px; opacity:0.9; margin:4px 0 0; }
+  .fv-tabs { display:flex; gap:4px; padding:10px 16px 0; background:white; border-bottom:1px solid #eee; }
+  .fv-tab { border:none; background:transparent; padding:10px 16px; font-size:14px; font-weight:600; color:#888; cursor:pointer; border-bottom:3px solid transparent; }
+  .fv-tab.active { color:var(--azul); border-bottom-color:var(--rojo); }
+  .fv-content { padding:20px; max-width:1100px; margin:0 auto; }
+  .fv-view { display:none; }
+  .fv-view.active { display:block; }
+  .fv-pos { display:grid; grid-template-columns:1fr 340px; gap:18px; }
+  @media (max-width:820px) { .fv-pos { grid-template-columns:1fr; } }
+  .fv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  .fv-card { background:white; border-radius:14px; padding:14px; border:2px solid transparent; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.06); text-align:left; }
+  .fv-card:hover:not(.out) { border-color:var(--azul); }
+  .fv-card.out { opacity:0.45; cursor:not-allowed; }
+  .fv-card .name { font-weight:600; font-size:14px; margin:0 0 6px; }
+  .fv-card .price { color:var(--azul); font-weight:700; font-size:15px; }
+  .fv-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(0,57,166,0.08); color:var(--azul); margin-top:8px; font-weight:600; }
+  .fv-cart { background:white; border-radius:16px; padding:18px; border-top:5px solid var(--rojo); height:fit-content; }
+  .fv-cart h3 { margin:0 0 12px; font-size:15px; }
+  .fv-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
+  .fv-qty { display:flex; align-items:center; gap:8px; }
+  .fv-qty button { width:24px; height:24px; border-radius:50%; border:1px solid var(--azul); background:white; color:var(--azul); font-weight:700; cursor:pointer; }
+  .fv-total { display:flex; justify-content:space-between; font-size:18px; font-weight:700; margin:14px 0; color:var(--azul-dark); }
+  .fv-pay { display:flex; gap:8px; margin-bottom:12px; }
+  .fv-pay button { flex:1; padding:10px; border-radius:10px; border:2px solid #e2e2e2; background:white; cursor:pointer; font-weight:600; font-size:13px; }
+  .fv-pay button.active { border-color:var(--azul); background:rgba(0,57,166,0.08); color:var(--azul); }
+  .fv-cash { width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ddd; font-size:14px; margin-bottom:10px; }
+  .fv-change { font-size:13px; margin-bottom:10px; padding:8px 10px; border-radius:8px; background:#f4f4f0; }
+  .fv-change.neg { background:#fdeceb; color:#a32d2d; }
+  .fv-confirm { width:100%; padding:14px; border-radius:12px; border:none; background:var(--rojo); color:white; font-weight:700; font-size:15px; cursor:pointer; }
+  .fv-confirm:disabled { opacity:0.5; cursor:not-allowed; }
+  .fv-table { width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; }
+  .fv-table th { text-align:left; background:var(--azul-dark); color:white; padding:10px 12px; font-size:12px; text-transform:uppercase; }
+  .fv-table td { padding:8px 12px; border-bottom:1px solid #f0f0f0; font-size:13px; }
+  .fv-input { border:1px solid #ddd; border-radius:6px; padding:6px 8px; width:100%; font-size:13px; }
+  .fv-add, .fv-download { padding:10px 18px; border-radius:10px; border:none; background:var(--azul); color:white; font-weight:600; cursor:pointer; margin-top:12px; }
+  .fv-save { padding:10px 18px; border-radius:10px; border:none; background:var(--rojo); color:white; font-weight:600; cursor:pointer; margin-left:10px; margin-top:12px; }
+  .fv-del { background:none; border:none; color:var(--rojo); cursor:pointer; font-weight:600; font-size:13px; }
+  .fv-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
+  .fv-metric { background:white; border-radius:12px; padding:14px 16px; }
+  .fv-metric .label { font-size:12px; color:#888; margin:0 0 6px; }
+  .fv-metric .val { font-size:22px; font-weight:700; color:var(--azul-dark); margin:0; }
+  .fv-toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--azul-dark); color:white; padding:10px 22px; border-radius:999px; font-size:13px; z-index:50; display:none; }
+  .fv-empty { color:#999; font-size:13px; text-align:center; padding:20px 0; }
+  .fv-loading { text-align:center; padding:60px 0; color:#888; }
+</style>
+</head>
+<body>
+
+<div class="fv-header">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><polygon points="12,1 15,9 23,9 16.5,14 19,22 12,17 5,22 7.5,14 1,9 9,9" /></svg>
+  <div>
+    <p class="fv-title">FONDA CEPAMA</p>
+    <p class="fv-sub">Venta de bebestibles - Fiestas Patrias</p>
+  </div>
+</div>
+
+<div class="fv-tabs">
+  <button class="fv-tab active" data-tab="vender">Vender</button>
+  <button class="fv-tab" data-tab="productos">Productos</button>
+  <button class="fv-tab" data-tab="reporte">Reporte</button>
+</div>
+
+<div class="fv-content">
+  <div id="loading" class="fv-loading">Cargando datos...</div>
+
+  <div id="view-vender" class="fv-view">
+    <div class="fv-pos">
+      <div id="grid" class="fv-grid"></div>
+      <div class="fv-cart">
+        <h3>Venta actual</h3>
+        <div id="cart-items"></div>
+        <div class="fv-total"><span>Total</span><span id="cart-total">$0</span></div>
+        <div class="fv-pay">
+          <button id="pay-efectivo" class="active">Efectivo</button>
+          <button id="pay-transferencia">Transferencia</button>
+        </div>
+        <div id="cash-block">
+          <input class="fv-cash" type="number" id="cash-input" placeholder="Monto recibido en efectivo" />
+          <div id="change-box" class="fv-change" style="display:none;"></div>
+        </div>
+        <button id="confirm-btn" class="fv-confirm">Confirmar venta</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-productos" class="fv-view">
+    <table class="fv-table">
+      <thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+      <tbody id="productos-body"></tbody>
+    </table>
+    <button class="fv-add" id="add-product">+ Agregar producto</button>
+    <button class="fv-save" id="save-products">Guardar cambios</button>
+  </div>
+
+  <div id="view-reporte" class="fv-view">
+    <div class="fv-metrics" id="metrics"></div>
+    <table class="fv-table">
+      <thead><tr><th>Producto</th><th>Vendidos</th><th>Ingreso</th><th>Stock actual</th></tr></thead>
+      <tbody id="reporte-body"></tbody>
+    </table>
+    <button class="fv-download" id="download-btn">Descargar reporte Excel</button>
+  </div>
+</div>
+
+<div id="toast" class="fv-toast"></div>
+
+<script>
+  // ==== CONFIGURACION ====
+  // Pega aqui la URL de tu Apps Script Web App (paso 3 de las instrucciones)
+  const APPS_SCRIPT_URL = 'PON_AQUI_LA_URL_DE_TU_APPS_SCRIPT';
+
+  let productos = [];
+  let ventas = [];
+  let cart = {};
+  let payMethod = 'efectivo';
+
+  const fmt = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
+  const toast = msg => {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => (t.style.display = 'none'), 2600);
+  };
+
+  async function loadData() {
+    try {
+      const res = await fetch(APPS_SCRIPT_URL);
+      const data = await res.json();
+      productos = data.productos || [];
+      ventas = data.ventas || [];
+    } catch (e) {
+      toast('No se pudo conectar con Google Sheets');
+      productos = [];
+      ventas = [];
+    }
+    document.getElementById('loading').style.display = 'none';
+    renderAll();
+  }
+
+  async function saveProductsToSheet(list) {
+    await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveProducts', productos: list }) });
+  }
+
+  async function registerSaleToSheet(sale) {
+    await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'registerSale', sale: sale }) });
+  }
+
+  // ---- Tabs ----
+  document.querySelectorAll('.fv-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.fv-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.fv-view').forEach(v => v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('view-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'reporte') renderReporte();
+    });
+  });
+  document.getElementById('view-vender').classList.add('active');
+
+  // ---- Vender ----
+  function renderGrid() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    productos.forEach(p => {
+      const inCart = cart[p.id] || 0;
+      const disponible = p.stock - inCart;
+      const card = document.createElement('button');
+      card.className = 'fv-card' + (disponible <= 0 ? ' out' : '');
+      card.disabled = disponible <= 0;
+      card.innerHTML = `<p class="name">${p.name}</p><p class="price">${fmt(p.price)}</p><span class="fv-badge">Stock: ${disponible}</span>`;
+      card.addEventListener('click', () => { if (disponible > 0) { cart[p.id] = inCart + 1; renderGrid(); renderCart(); } });
+      grid.appendChild(card);
+    });
+  }
+
+  function cartItems() {
+    return Object.entries(cart).map(([id, qty]) => {
+      const p = productos.find(x => x.id === id);
+      return p ? { ...p, qty, subtotal: p.price * qty } : null;
+    }).filter(Boolean);
+  }
+
+  function changeQty(id, delta) {
+    const p = productos.find(x => x.id === id);
+    let next = (cart[id] || 0) + delta;
+    if (next < 0) next = 0;
+    if (p && next > p.stock) next = p.stock;
+    if (next === 0) delete cart[id]; else cart[id] = next;
+    renderGrid(); renderCart();
+  }
+
+  function renderCart() {
+    const box = document.getElementById('cart-items');
+    const items = cartItems();
+    box.innerHTML = items.length === 0 ? '<p class="fv-empty">Toca un producto para agregarlo</p>' : '';
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'fv-item';
+      row.innerHTML = `<span>${it.name}</span><div class="fv-qty"><button data-a="-1">-</button><span>${it.qty}</span><button data-a="1">+</button></div><span>${fmt(it.subtotal)}</span>`;
+      row.querySelectorAll('button').forEach(b => b.addEventListener('click', () => changeQty(it.id, Number(b.dataset.a))));
+      box.appendChild(row);
+    });
+    const total = items.reduce((s, it) => s + it.subtotal, 0);
+    document.getElementById('cart-total').textContent = fmt(total);
+    updateChange();
+  }
+
+  function updateChange() {
+    const total = cartItems().reduce((s, it) => s + it.subtotal, 0);
+    const cashVal = parseFloat(document.getElementById('cash-input').value) || 0;
+    const box = document.getElementById('change-box');
+    if (payMethod !== 'efectivo' || document.getElementById('cash-input').value === '') {
+      box.style.display = 'none';
+      return;
+    }
+    const vuelto = cashVal - total;
+    box.style.display = 'block';
+    box.className = 'fv-change' + (vuelto < 0 ? ' neg' : '');
+    box.textContent = vuelto < 0 ? `Faltan ${fmt(Math.abs(vuelto))}` : `Vuelto: ${fmt(vuelto)}`;
+  }
+
+  document.getElementById('pay-efectivo').addEventListener('click', () => {
+    payMethod = 'efectivo';
+    document.getElementById('pay-efectivo').classList.add('active');
+    document.getElementById('pay-transferencia').classList.remove('active');
+    document.getElementById('cash-block').style.display = 'block';
+    updateChange();
+  });
+  document.getElementById('pay-transferencia').addEventListener('click', () => {
+    payMethod = 'transferencia';
+    document.getElementById('pay-transferencia').classList.add('active');
+    document.getElementById('pay-efectivo').classList.remove('active');
+    document.getElementById('cash-block').style.display = 'none';
+  });
+  document.getElementById('cash-input').addEventListener('input', updateChange);
+
+  document.getElementById('confirm-btn').addEventListener('click', async () => {
+    const items = cartItems();
+    const total = items.reduce((s, it) => s + it.subtotal, 0);
+    const cashVal = parseFloat(document.getElementById('cash-input').value) || 0;
+    if (items.length === 0) { toast('Agrega productos primero'); return; }
+    if (payMethod === 'efectivo' && cashVal < total) { toast('El monto recibido es menor al total'); return; }
+
+    const btn = document.getElementById('confirm-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    const sale = {
+      id: 'v' + Date.now(),
+      fecha: new Date().toISOString(),
+      items: items.map(it => ({ id: it.id, name: it.name, qty: it.qty, price: it.price, subtotal: it.subtotal })),
+      total,
+      metodoPago: payMethod,
+      montoRecibido: payMethod === 'efectivo' ? cashVal : total,
+      vuelto: payMethod === 'efectivo' ? Math.max(0, cashVal - total) : 0,
+    };
+
+    productos = productos.map(p => { const q = cart[p.id]; return q ? { ...p, stock: p.stock - q } : p; });
+    ventas.push({ ventaId: sale.id, fecha: sale.fecha, ...sale });
+
+    try {
+      await registerSaleToSheet(sale);
+      toast('Venta registrada');
+    } catch (e) {
+      toast('Error al guardar en Sheets');
+    }
+
+    cart = {};
+    document.getElementById('cash-input').value = '';
+    btn.disabled = false; btn.textContent = 'Confirmar venta';
+    renderGrid(); renderCart();
+  });
+
+  // ---- Productos ----
+  function renderProductos() {
+    const body = document.getElementById('productos-body');
+    body.innerHTML = '';
+    productos.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="fv-input" data-field="name" value="${p.name}"></td>
+        <td><input class="fv-input" type="number" data-field="price" value="${p.price}"></td>
+        <td><input class="fv-input" type="number" data-field="stock" value="${p.stock}"></td>
+        <td><button class="fv-del">Eliminar</button></td>`;
+      tr.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const field = inp.dataset.field;
+          p[field] = field === 'name' ? inp.value : Number(inp.value);
+        });
+      });
+      tr.querySelector('.fv-del').addEventListener('click', () => {
+        productos = productos.filter(x => x.id !== p.id);
+        renderProductos();
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('add-product').addEventListener('click', () => {
+    productos.push({ id: 'p' + Date.now(), name: 'Nuevo producto', price: 1000, stock: 10 });
+    renderProductos();
+  });
+
+  document.getElementById('save-products').addEventListener('click', async () => {
+    try {
+      await saveProductsToSheet(productos);
+      toast('Productos guardados');
+      renderGrid();
+    } catch (e) {
+      toast('Error al guardar');
+    }
+  });
+
+  // ---- Reporte ----
+  function renderReporte() {
+    const rows = productos.map(p => {
+      const vendidos = ventas.filter(v => v.producto === p.name).reduce((s, v) => s + Number(v.cantidad), 0);
+      const ingreso = ventas.filter(v => v.producto === p.name).reduce((s, v) => s + Number(v.subtotal), 0);
+      return { nombre: p.name, vendidos, ingreso, stockActual: p.stock };
+    });
+    const totalIngresos = rows.reduce((s, r) => s + r.ingreso, 0);
+    const totalVendidos = rows.reduce((s, r) => s + r.vendidos, 0);
+    const ventasUnicas = new Set(ventas.map(v => v.ventaId)).size;
+
+    document.getElementById('metrics').innerHTML = `
+      <div class="fv-metric"><p class="label">Total vendido</p><p class="val">${fmt(totalIngresos)}</p></div>
+      <div class="fv-metric"><p class="label">Unidades vendidas</p><p class="val">${totalVendidos}</p></div>
+      <div class="fv-metric"><p class="label">Ventas registradas</p><p class="val">${ventasUnicas}</p></div>`;
+
+    const body = document.getElementById('reporte-body');
+    body.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.nombre}</td><td>${r.vendidos}</td><td>${fmt(r.ingreso)}</td><td>${r.stockActual}</td>`;
+      body.appendChild(tr);
+    });
+
+    document.getElementById('download-btn').onclick = () => downloadExcel(rows, totalVendidos, totalIngresos);
+  }
+
+  function downloadExcel(rows, totalVendidos, totalIngresos) {
+    const wsData = rows.map(r => ({ Producto: r.nombre, 'Cantidad Vendida': r.vendidos, 'Ingreso Total': r.ingreso, 'Stock Actual': r.stockActual }));
+    wsData.push({ Producto: 'TOTAL', 'Cantidad Vendida': totalVendidos, 'Ingreso Total': totalIngresos, 'Stock Actual': '' });
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+
+    const detalle = ventas.map(v => ({
+      Fecha: new Date(v.fecha).toLocaleString('es-CL'),
+      Producto: v.producto,
+      Cantidad: v.cantidad,
+      'Precio Unit.': v.precioUnit,
+      Subtotal: v.subtotal,
+      'Metodo Pago': v.metodoPago,
+    }));
+    if (detalle.length) {
+      const ws2 = XLSX.utils.json_to_sheet(detalle);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Ventas');
+    }
+
+    XLSX.writeFile(wb, `reporte-ventas-fonda-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  function renderAll() {
+    renderGrid();
+    renderCart();
+    renderProductos();
+    renderReporte();
+  }
+
+  loadData();
+</script>
+</body>
+</html>
