@@ -121,7 +121,7 @@
 <script>
   // ==== CONFIGURACION ====
   // Pega aqui la URL de tu Apps Script Web App (paso 3 de las instrucciones)
-  const APPS_SCRIPT_URL = 'PON_AQUI_LA_URL_DE_TU_APPS_SCRIPT';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHOKT94bDPFp2wBykGrGL8zg9255c7OGWJVjUAjCXkNe7beNtTesefDcAlSGSLaDQnxg/exec';
 
   let productos = [];
   let ventas = [];
@@ -269,7 +269,20 @@
     };
 
     productos = productos.map(p => { const q = cart[p.id]; return q ? { ...p, stock: p.stock - q } : p; });
-    ventas.push({ ventaId: sale.id, fecha: sale.fecha, ...sale });
+    sale.items.forEach(it => {
+      ventas.push({
+        ventaId: sale.id,
+        fecha: sale.fecha,
+        producto: it.name,
+        cantidad: it.qty,
+        precioUnit: it.price,
+        subtotal: it.subtotal,
+        metodoPago: sale.metodoPago,
+        total: sale.total,
+        montoRecibido: sale.montoRecibido,
+        vuelto: sale.vuelto,
+      });
+    });
 
     try {
       await registerSaleToSheet(sale);
