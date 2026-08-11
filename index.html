@@ -51,6 +51,7 @@
   .fv-table td { padding:8px 12px; border-bottom:1px solid #f0f0f0; font-size:13px; }
   .fv-input { border:1px solid #ddd; border-radius:6px; padding:6px 8px; width:100%; font-size:13px; }
   .fv-add, .fv-download { padding:10px 18px; border-radius:10px; border:none; background:var(--azul); color:white; font-weight:600; cursor:pointer; margin-top:12px; }
+  .fv-subtitle { font-size:15px; color:var(--azul-dark); margin:22px 0 10px; }
   .fv-save { padding:10px 18px; border-radius:10px; border:none; background:var(--rojo); color:white; font-weight:600; cursor:pointer; margin-left:10px; margin-top:12px; }
   .fv-del { background:none; border:none; color:var(--rojo); cursor:pointer; font-weight:600; font-size:13px; }
   .fv-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
@@ -132,6 +133,11 @@
     <table class="fv-table">
       <thead><tr><th>Producto</th><th>Vendidos</th><th>Ingreso</th><th>Stock actual</th></tr></thead>
       <tbody id="reporte-body"></tbody>
+    </table>
+    <h3 class="fv-subtitle">Detalle de ventas</h3>
+    <table class="fv-table">
+      <thead><tr><th>Hora</th><th>Detalle</th><th>Metodo</th><th>Total</th></tr></thead>
+      <tbody id="detalle-body"></tbody>
     </table>
     <button class="fv-download" id="download-btn">Descargar reporte Excel</button>
   </div>
@@ -441,12 +447,25 @@
     });
     const totalIngresos = rows.reduce((s, r) => s + r.ingreso, 0);
     const totalVendidos = rows.reduce((s, r) => s + r.vendidos, 0);
-    const ventasUnicas = new Set(ventas.map(v => v.ventaId)).size;
+
+    const salesMap = {};
+    ventas.forEach(v => {
+      if (!salesMap[v.ventaId]) {
+        salesMap[v.ventaId] = { ventaId: v.ventaId, fecha: v.fecha, metodoPago: v.metodoPago, total: Number(v.total), items: [] };
+      }
+      salesMap[v.ventaId].items.push(v);
+    });
+    const salesList = Object.values(salesMap).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const ventasUnicas = salesList.length;
+    const totalEfectivo = salesList.filter(s => s.metodoPago === 'efectivo').reduce((s, x) => s + x.total, 0);
+    const totalTransferencia = salesList.filter(s => s.metodoPago === 'transferencia').reduce((s, x) => s + x.total, 0);
 
     document.getElementById('metrics').innerHTML = `
       <div class="fv-metric"><p class="label">Total vendido</p><p class="val">${fmt(totalIngresos)}</p></div>
       <div class="fv-metric"><p class="label">Unidades vendidas</p><p class="val">${totalVendidos}</p></div>
-      <div class="fv-metric"><p class="label">Ventas registradas</p><p class="val">${ventasUnicas}</p></div>`;
+      <div class="fv-metric"><p class="label">Ventas registradas</p><p class="val">${ventasUnicas}</p></div>
+      <div class="fv-metric"><p class="label">Efectivo</p><p class="val">${fmt(totalEfectivo)}</p></div>
+      <div class="fv-metric"><p class="label">Transferencia</p><p class="val">${fmt(totalTransferencia)}</p></div>`;
 
     const body = document.getElementById('reporte-body');
     body.innerHTML = '';
@@ -456,12 +475,28 @@
       body.appendChild(tr);
     });
 
-    document.getElementById('download-btn').onclick = () => downloadExcel(rows, totalVendidos, totalIngresos);
+    const detBody = document.getElementById('detalle-body');
+    detBody.innerHTML = '';
+    if (salesList.length === 0) {
+      detBody.innerHTML = '<tr><td colspan="4" class="fv-empty">Aun no hay ventas registradas</td></tr>';
+    }
+    salesList.forEach(s => {
+      const hora = new Date(s.fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+      const detalle = s.items.map(it => `${it.cantidad}x ${it.producto}`).join(', ');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${hora}</td><td>${detalle}</td><td>${s.metodoPago === 'efectivo' ? 'Efectivo' : 'Transferencia'}</td><td>${fmt(s.total)}</td>`;
+      detBody.appendChild(tr);
+    });
+
+    document.getElementById('download-btn').onclick = () => downloadExcel(rows, totalVendidos, totalIngresos, totalEfectivo, totalTransferencia);
   }
 
-  function downloadExcel(rows, totalVendidos, totalIngresos) {
+  function downloadExcel(rows, totalVendidos, totalIngresos, totalEfectivo, totalTransferencia) {
     const wsData = rows.map(r => ({ Producto: r.nombre, 'Cantidad Vendida': r.vendidos, 'Ingreso Total': r.ingreso, 'Stock Actual': r.stockActual }));
     wsData.push({ Producto: 'TOTAL', 'Cantidad Vendida': totalVendidos, 'Ingreso Total': totalIngresos, 'Stock Actual': '' });
+    wsData.push({ Producto: '', 'Cantidad Vendida': '', 'Ingreso Total': '', 'Stock Actual': '' });
+    wsData.push({ Producto: 'Total Efectivo', 'Cantidad Vendida': '', 'Ingreso Total': totalEfectivo, 'Stock Actual': '' });
+    wsData.push({ Producto: 'Total Transferencia', 'Cantidad Vendida': '', 'Ingreso Total': totalTransferencia, 'Stock Actual': '' });
     const ws = XLSX.utils.json_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
