@@ -38,6 +38,10 @@
   .fv-pay button { flex:1; padding:10px; border-radius:10px; border:2px solid #e2e2e2; background:white; cursor:pointer; font-weight:600; font-size:13px; }
   .fv-pay button.active { border-color:var(--azul); background:rgba(0,57,166,0.08); color:var(--azul); }
   .fv-cash { width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ddd; font-size:14px; margin-bottom:10px; }
+  .fv-quickcash { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .fv-quickcash button { flex:1 1 30%; padding:8px 4px; border-radius:8px; border:2px solid #e2e2e2; background:white; cursor:pointer; font-weight:600; font-size:12px; color:var(--azul-dark); }
+  .fv-quickcash button.exact { border-color:var(--rojo); color:var(--rojo); flex-basis:100%; }
+  .fv-quickcash button:hover { border-color:var(--azul); }
   .fv-change { font-size:13px; margin-bottom:10px; padding:8px 10px; border-radius:8px; background:#f4f4f0; }
   .fv-change.neg { background:#fdeceb; color:#a32d2d; }
   .fv-confirm { width:100%; padding:14px; border-radius:12px; border:none; background:var(--rojo); color:white; font-weight:700; font-size:15px; cursor:pointer; }
@@ -104,6 +108,7 @@
           <button id="pay-transferencia">Transferencia</button>
         </div>
         <div id="cash-block">
+          <div id="quick-cash" class="fv-quickcash"></div>
           <input class="fv-cash" type="number" id="cash-input" placeholder="Monto recibido en efectivo" />
           <div id="change-box" class="fv-change" style="display:none;"></div>
         </div>
@@ -233,6 +238,32 @@
     });
     const total = items.reduce((s, it) => s + it.subtotal, 0);
     document.getElementById('cart-total').textContent = fmt(total);
+    renderQuickCash();
+    updateChange();
+  }
+
+  function renderQuickCash() {
+    const total = cartItems().reduce((s, it) => s + it.subtotal, 0);
+    const box = document.getElementById('quick-cash');
+    box.innerHTML = '';
+    if (payMethod !== 'efectivo' || total <= 0) return;
+
+    const exactBtn = document.createElement('button');
+    exactBtn.className = 'exact';
+    exactBtn.textContent = `Exacto (${fmt(total)})`;
+    exactBtn.addEventListener('click', () => setCash(total));
+    box.appendChild(exactBtn);
+
+    [2000, 5000, 10000, 15000, 20000].forEach(v => {
+      const b = document.createElement('button');
+      b.textContent = fmt(v);
+      b.addEventListener('click', () => setCash(v));
+      box.appendChild(b);
+    });
+  }
+
+  function setCash(v) {
+    document.getElementById('cash-input').value = v;
     updateChange();
   }
 
@@ -255,6 +286,7 @@
     document.getElementById('pay-efectivo').classList.add('active');
     document.getElementById('pay-transferencia').classList.remove('active');
     document.getElementById('cash-block').style.display = 'block';
+    renderQuickCash();
     updateChange();
   });
   document.getElementById('pay-transferencia').addEventListener('click', () => {
