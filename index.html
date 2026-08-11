@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Fonda CEPAMA - Venta de Bebestibles</title>
-   <link rel="icon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap');
@@ -57,9 +56,21 @@
   .fv-toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--azul-dark); color:white; padding:10px 22px; border-radius:999px; font-size:13px; z-index:50; display:none; }
   .fv-empty { color:#999; font-size:13px; text-align:center; padding:20px 0; }
   .fv-loading { text-align:center; padding:60px 0; color:#888; }
+  #receipt { display:none; }
+  @media print {
+    body * { visibility: hidden; }
+    #receipt, #receipt * { visibility: visible; }
+    #receipt { display:block; position:absolute; top:0; left:0; width:80mm; padding:4mm; font-family:'Courier New',monospace; font-size:12px; color:#000; }
+    #receipt .center { text-align:center; }
+    #receipt .line { border-top:1px dashed #000; margin:4px 0; }
+    #receipt .row { display:flex; justify-content:space-between; }
+    #receipt .bold { font-weight:700; }
+    #receipt .title { font-size:14px; font-weight:700; }
+  }
 </style>
 </head>
 <body>
+<div id="receipt"></div>
 
 <div class="fv-header">
   <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><polygon points="12,1 15,9 23,9 16.5,14 19,22 12,17 5,22 7.5,14 1,9 9,9" /></svg>
@@ -94,6 +105,7 @@
           <div id="change-box" class="fv-change" style="display:none;"></div>
         </div>
         <button id="confirm-btn" class="fv-confirm">Confirmar venta</button>
+        <button id="print-btn" class="fv-confirm" style="display:none;margin-top:8px;background:var(--azul);">Imprimir boleta</button>
       </div>
     </div>
   </div>
@@ -292,10 +304,51 @@
       toast('Error al guardar en Sheets');
     }
 
+    lastSale = sale;
+    buildReceipt(sale);
+    document.getElementById('print-btn').style.display = 'block';
+
     cart = {};
     document.getElementById('cash-input').value = '';
     btn.disabled = false; btn.textContent = 'Confirmar venta';
     renderGrid(); renderCart();
+  });
+
+  // ---- Boleta / impresora térmica ----
+  let lastSale = null;
+
+  function buildReceipt(sale) {
+    const fecha = new Date(sale.fecha);
+    const fechaStr = fecha.toLocaleDateString('es-CL');
+    const horaStr = fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    let itemsHtml = '';
+    sale.items.forEach(it => {
+      itemsHtml += `<div class="row"><span>${it.qty} x ${it.name}</span><span>${fmt(it.subtotal)}</span></div>`;
+    });
+    let pagoHtml = `<div class="row"><span>Pago</span><span>${sale.metodoPago === 'efectivo' ? 'Efectivo' : 'Transferencia'}</span></div>`;
+    if (sale.metodoPago === 'efectivo') {
+      pagoHtml += `<div class="row"><span>Recibido</span><span>${fmt(sale.montoRecibido)}</span></div>`;
+      pagoHtml += `<div class="row"><span>Vuelto</span><span>${fmt(sale.vuelto)}</span></div>`;
+    }
+    document.getElementById('receipt').innerHTML = `
+      <div class="center title">CEPAMA</div>
+      <div class="center">Fiesta Costumbrista</div>
+      <div class="center">${fechaStr} ${horaStr}</div>
+      <div class="line"></div>
+      ${itemsHtml}
+      <div class="line"></div>
+      <div class="row bold"><span>TOTAL</span><span>${fmt(sale.total)}</span></div>
+      <div class="line"></div>
+      ${pagoHtml}
+      <div class="line"></div>
+      <div class="center">Gracias por su compra!</div>
+    `;
+  }
+
+  document.getElementById('print-btn').addEventListener('click', () => {
+    if (!lastSale) return;
+    buildReceipt(lastSale);
+    window.print();
   });
 
   // ---- Productos ----
@@ -396,7 +449,6 @@
   }
 
   loadData();
-  
 </script>
 </body>
 </html>
