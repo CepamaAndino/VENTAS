@@ -62,19 +62,97 @@
   .fv-empty { color:#999; font-size:13px; text-align:center; padding:20px 0; }
   .fv-loading { text-align:center; padding:60px 0; color:#888; }
   #receipt { display:none; }
-  @media print {
-    body * { visibility: hidden; }
-    #receipt, #receipt * { visibility: visible; }
-    #receipt { display:block; position:absolute; top:0; left:0; width:58mm; padding:3mm; font-family:'Courier New',monospace; font-size:10px; color:#000; }
-    #receipt .center { text-align:center; }
-    #receipt .line { border-top:1px dashed #000; margin:4px 0; }
-    #receipt .row { display:flex; justify-content:space-between; }
-    #receipt .bold { font-weight:700; }
-    #receipt .title { font-size:14px; font-weight:700; }
-    #receipt .logo-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-    #receipt .logo-row img { width:11mm; height:auto; }
-    #receipt .logo-row .head-text { text-align:left; }
+  @page {
+  size: 58mm auto;
+  margin: 0;
+}
+
+@media print {
+
+  html, body {
+    width: 58mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #receipt,
+  #receipt * {
+    visibility: visible;
+    color: #000 !important;
+    opacity: 1 !important;
+  }
+
+  #receipt {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 54mm !important;
+    padding: 2mm !important;
+    margin: 0 !important;
+
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+
+    color: #000 !important;
+    background: #fff !important;
+
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #receipt .center {
+    text-align: center;
+    font-weight: 600;
+  }
+
+  #receipt .line {
+    border-top: 2px solid #000 !important;
+    margin: 5px 0;
+  }
+
+  #receipt .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    font-weight: 600;
+  }
+
+  #receipt .bold {
+    font-weight: 900 !important;
+  }
+
+  #receipt .title {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+  }
+
+  #receipt .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  #receipt .logo-row img {
+    width: 12mm !important;
+    height: auto !important;
+    filter: grayscale(1) contrast(200%) !important;
+  }
+
+  #receipt .logo-row .head-text {
+    text-align: left;
+    font-weight: 700;
+  }
+}
 </style>
 </head>
 <body>
